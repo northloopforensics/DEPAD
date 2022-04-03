@@ -1,0 +1,110 @@
+#python3 script to walk directory and strip first 64 bytes from each file
+#Run this on a copied folder.  It will place a copy of the file in same location with the 64 byte header stripped
+#It also adds 'AMENDED' to the front of the file name so you know what is new
+#This does not look at file extensions so this will break normal files :)
+
+#TO DO Preview window to show user the expected outcome of their data.
+
+import os
+import PySimpleGUI as sg
+import itertools
+import argparse
+
+
+BEGIN_PRINTABLES = 33
+END_PRINTABLES = 126
+
+
+def hex_group_formatter(iterable):
+    chunks = [iter(iterable)] * 4
+    return '   '.join(
+        ' '.join(format(x, '0>2x') for x in chunk)
+        for chunk in itertools.zip_longest(*chunks, fillvalue=0))
+
+def ascii_group_formatter(iterable):
+    return ''.join(
+        chr(x) if BEGIN_PRINTABLES <= x <= END_PRINTABLES else '.'
+        for x in iterable)
+
+def hex_viewer(filename, chunk_size=16):
+    header = hex_group_formatter(range(chunk_size))
+    yield 'ADDRESS        {:<53}       ASCII'.format(header)
+    yield ''
+    template = '{:0>8x}       {:<53}       {}'
+
+    with open(filename, 'rb') as stream:
+        for chunk_count in itertools.count(1):
+            chunk = stream.read(chunk_size)
+            if not chunk:
+                return
+            yield template.format(
+                chunk_count * chunk_size,
+                hex_group_formatter(chunk),
+                ascii_group_formatter(chunk))
+
+
+input_directory = "C:\\Absolute\\Path\\To\\Directory" #rename this to location of evidence folder
+
+
+
+def Fix_MFn_Facebook_Return():                                  #Walks the directory tree to find files
+    for root, dirs, files in os.walk(input_directory):          #walks directory, subdirectories, and files
+        for file in files:                                      #iterates to find files
+            filename = os.path.join(root,file)                  #creates an absolute path for each file
+            out_name = os.path.join(root, "AMENDED_" + file)    #creates a new name for altered files
+            with open(filename, 'rb') as in_file:               #reads binary data of original file
+                with open(out_name, 'wb') as out_file:          #makes a new output file
+                    out_file.write(in_file.read()[64:])         #writes binary data less first 64 bytes from original file to new file
+
+Fix_MFn_Facebook_Return()
+
+Col_1 =  ([sg.Text('Knock It Off', size=(18, 1), font=('Impact', 25, 'bold italic'))],
+            [sg.Text(' A Tool to Remove Padded Data from the Start or End of File Data.', font=('Arial', 12,'bold'))],
+            [sg.Text('')],
+            [sg.Text('Select Volume or Directory Containing Files to be Altered:')],
+            [sg.Input(key='SOURCE',), sg.FolderBrowse(key='SOURCE')],
+            [sg.Radio('# of Bytes to Remove from Start of Files', key="STARTOFFILE", default=True, group_id=1.), sg.Input('', size=(10,2), key="STARTBYTES")],
+            #[sg.Text('_'*82)],
+            [sg.Radio('# of Bytes to Remove from End of Files ', enable_events=True ,key="ENDOFFILE", group_id=1), sg.Input('', size=(10,2), key="ENDBYTES")],) 
+
+Col_2 = ([sg.Text('Select a sample file to preview the results before execution:')],
+        [sg.Input(key='PREVIEWFILE',), sg.FileBrowse(key='PREVIEWFILE')],  
+        [sg.Button('Preview')],  
+        [sg.Text('')],
+        [sg.Output(size=(84, 7), key="HEXVIEW")],) 
+        # [sg.Output(size=(85,10),)]
+
+layout = [[sg.Column(Col_1), sg.VerticalSeparator(pad=None), sg.Column(Col_2)],   
+            
+            [sg.Text('')],
+            [sg.Button('REMOVE PADDED DATA FOR FOLDER DATA', key='Ok'), sg.Text(' '*50), sg.Button('?', key='HELP')]]
+
+# Create the Window
+window = sg.Window('North Loop Consulting', layout, no_titlebar=False, alpha_channel=1, grab_anywhere=False)
+# Event Loop to process "events" and get the "values" of the inputs
+
+while True:
+    event, values = window.read()
+    if event == sg.WIN_CLOSED or event == 'Exit': # if user closes window or clicks cancel
+        break
+    if event == 'HELP':
+        sg.Popup("FOR BEST RESULTS RUN AS ADMIN \n\nThis tool seeks to find Bitlocker Recovery Keys with a focus for on-scene triage.  On opening the tool you will see both an interface window to input selections and a console window which will display search results. Closing one window will close the other. \n\nThe tool uses three methods to recover keys:  \n\nThe first method searches for file names consistent with Recovery Key files including .TXT and .BEK file extensions. This method returns the file's path. \n\nThe second method performs pattern searches for key values in text files encoded in UTF 16 LE. This method returns the file's path and the string hit.\n\nIf you are running both methods, expect duplicate file hits. \n\nFiles meeting your search criteria can be saved to an output folder of your choice.\n\nThe third method makes use of the manage-bde interface to collect keys for mounted volumes on an active system and save those keys to a text file. \n\nNo warranty or guarantee is offered with this tool. Use at your own risk. \n\nCopyright 2021 North Loop Consulting\n")
+        window.refresh()
+    elif event == 'Ok':
+        folder = os.walk(values["SOURCE"])
+        print("*** SEARCHING FOR KEY FILES... ***")
+        walk()
+        if values["FILENAME"] == True:
+            print("Searching for file names in " + values['SOURCE'])
+            name_search()
+        if values["REG"] == True:
+            print("Conducting string search in " + values['SOURCE'])
+            string_search()
+        if values['COPYSWITCH'] == True:
+            copy_key_files()
+        if values['MGBDE'] == True:
+            get_active_keys()
+        print("\n******  COMPLETE  ******")
+    window.refresh()
+window.close()
+            

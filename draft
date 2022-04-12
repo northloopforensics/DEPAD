@@ -5,10 +5,10 @@
 #It will remove bytes, and if the wrong bytes, it will break the newly copied files (but leave the original).
 
 #TO DO 
-#   Functioning GUI
-#   Preview window to show user the expected outcome of their data on hex view of a sample file.
-#   Progress bar
-#   Activity report - txt format include time/date, user settings, files processed
+#   Functioning GUI - 80%
+#   Preview window to show user the expected outcome of their data on hex view of a sample file.  70%
+#   Progress bar  0%
+#   Activity report - txt format include time/date, user settings, files processed    0%
 
 import os
 import PySimpleGUI as sg

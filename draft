@@ -1,35 +1,34 @@
-#python3 script to walk directory and strip first 64 bytes from each file
-#Run this on a copied folder.  It will place a copy of the file in same location with the 64 byte header stripped
+#python3 script to walk directory and strip first or last bytes from each file under that directory
+#Run this on a copied folder.  It will place a copy of the file in same location with the selected bytes stripped
 #It also adds 'AMENDED' to the front of the file name so you know what is new
-#This does not look at file extensions so this will break normal files :)
+#This does not look at file headers. It is not smart. 
+#It will remove bytes, and if the wrong bytes, it will break the newly copied files (but leave the original).
 
-#TO DO Preview window to show user the expected outcome of their data.
+#TO DO 
+#   Functioning GUI
+#   Preview window to show user the expected outcome of their data on hex view of a sample file.
+#   Progress bar
+#   Activity report - txt format include time/date, user settings, files processed
 
 import os
 import PySimpleGUI as sg
 import itertools
-import argparse
 
-
-BEGIN_PRINTABLES = 33
-END_PRINTABLES = 126
-
-
-
+BEGIN_TABLES = 33
+END_TABLES = 126
 
 def hex_group_formatter(iterable):
-    chunks = [iter(iterable)] * 8
+    chunks = [iter(iterable)] * 8              #iter * 8byte groupings
     return '   '.join(
         ' '.join(format(x, '0>2x') for x in chunk)
         for chunk in itertools.zip_longest(*chunks, fillvalue=0))
 
-def ascii_group_formatter(iterable):
+def ascii_group_formatter(iterable):                        #make the table layout
     return ''.join(
-        chr(x) if BEGIN_PRINTABLES <= x <= END_PRINTABLES else '.'
+        chr(x) if BEGIN_TABLES <= x <= END_TABLES else '.'
         for x in iterable)
 
-def hex_viewer(filename, chunk_size=16):
-    filename = values['PREVIEWFILE']
+def hex_viewer(filename, chunk_size=16):                    #get the table data populated
     header = hex_group_formatter(range(chunk_size))
     yield 'ADDRESS     {:<53}      ASCII'.format(header)
     yield ''
@@ -45,43 +44,66 @@ def hex_viewer(filename, chunk_size=16):
                 hex_group_formatter(chunk),
                 ascii_group_formatter(chunk))
 
+def Cut_What_Where():                                  #Walks the directory tree to find files
+    BYTES_TO_REMOVE_FROM_START = values["STARTBYTES"]
+    if BYTES_TO_REMOVE_FROM_START != "":
+        try:
+            BYTES_TO_REMOVE_FROM_START = int(BYTES_TO_REMOVE_FROM_START)        #Getting the Byte input for starting bytes and making sure it is an integer
+        except(ValueError):
+            print("Error - Byte count must be a decimal numeric value")
+    
+    BYTES_TO_REMOVE_FROM_END = values["ENDBYTES"]                           #Getting the Byte input for ending bytes and making sure it is an integer
+    if BYTES_TO_REMOVE_FROM_END != "":
+        try:
+            BYTES_TO_REMOVE_FROM_END = int(BYTES_TO_REMOVE_FROM_END)
+        except(ValueError):
+            print("ValueError - Byte count must be a decimal numeric value")
+            
+    
+    input_directory = values['SOURCE']  
+    output_directory = values['OUT']                                        #rename this to location of evidence folder
+    for root, dirs, files in os.walk(input_directory):                      #walks directory, subdirectories, and files
+        for file in files:                                                  #iterates to find files
+            filepath = os.path.join(root,file)                              #creates an absolute path for each file
+            out_name = os.path.join(output_directory, "AMENDED_" + file)    #creates a new name for altered files
+            with open(filepath, 'rb') as in_file:                           #reads binary data of original file
+                with open(out_name, 'wb') as out_file:                      #makes a new output file
+                    try:
+                        if values["STARTOFFILE"] == True:
+                            out_file.write(in_file.read()[BYTES_TO_REMOVE_FROM_START:])     #writes binary data less first N bytes from original file to new file
+                        elif values["ENDOFFILE"] == True:
+                            out_file.write(in_file.read()[:-BYTES_TO_REMOVE_FROM_END])       #writes binary data less last N bytes from original file to new file
+                    except(TypeError):
+                        print("TypeError - Byte count must be a decimal numeric value")
+                    # except(ValueError):
+                    #     print("Error - Byte count must be a decimal numeric value")
+                        
 
+sg.theme('lightgray6')
 
-def Fix_MFn_Facebook_Return():                                  #Walks the directory tree to find files
-    input_directory = values['SOURCE'] #rename this to location of evidence folder
-    for root, dirs, files in os.walk(input_directory):          #walks directory, subdirectories, and files
-        for file in files:                                      #iterates to find files
-            filepath = os.path.join(root,file)                  #creates an absolute path for each file
-            out_name = os.path.join(root, "AMENDED_" + file)    #creates a new name for altered files
-            with open(filepath, 'rb') as in_file:               #reads binary data of original file
-                with open(out_name, 'wb') as out_file:          #makes a new output file
-                    out_file.write(in_file.read()[64:])         #writes binary data less first 64 bytes from original file to new file
-
-
-
-sg.theme('darkblue')
-
-Col_1 =  ([sg.Text('Knock It Off', size=(18, 1), font=('Impact', 25, 'bold italic'))],
+# GUI COLUMN SHOWING DATA REMOVAL OPTIONS
+Col_1 =  ([sg.Text('Cut It Out', size=(18, 1), font=('Impact', 25, 'bold italic'))],
             [sg.Text(' A Tool to Remove Padded Data from the Start or End of File Data.', font=('Arial', 12,'bold'))],
             [sg.Text('')],
-            [sg.Text('Select Volume or Directory Containing Files to be Altered:')],
-            [sg.Input(key='SOURCE',), sg.FolderBrowse(key='SOURCE')],
+            [sg.Text('Select Input and Output Directory:')],
+            [sg.Input("Folder Containing Source Data", key='SOURCE',), sg.FolderBrowse(key='SOURCE')],
+            [sg.Input("Output Folder", key='OUT',), sg.FolderBrowse(key='OUT')],
             [sg.Radio('# of Bytes to Remove from Start of Files (Dec)', key="STARTOFFILE", default=True, group_id=1.), sg.Input('', size=(10,2), key="STARTBYTES")],
             #[sg.Text('_'*82)],
-            [sg.Radio('# of Bytes to Remove from End of Files (Dec) ', enable_events=True ,key="ENDOFFILE", group_id=1), sg.Input('', size=(10,2), key="ENDBYTES")],) 
+            [sg.Radio('# of Bytes to Remove from End of Files (Dec) ', enable_events=True ,key="ENDOFFILE", group_id=1), sg.Input('', size=(10,2), key="ENDBYTES")],
+            [sg.Checkbox('Include Activity Log')]) 
 
-Col_2 = ([sg.Output(size=(84, 14), key="HEXVIEW")],
+#GUI COLUMN SHOWING SAMPLE FILE PREVIEW INFORMATION
+Col_2 = (#[sg.Output(size=(84, 14), key="HEXVIEW")],
         [sg.Text('Select a sample file to preview the results before execution:')],
         [sg.Input(key='PREVIEWFILE',), sg.FileBrowse(key='PREVIEWFILE')],  
-        [sg.Button('Preview')],  
+        [sg.Button('Preview', key="PREVIEW")],  
         [sg.Text('')],
-        ) 
-        # [sg.Output(size=(85,10),)]
+        [sg.MLine(key='-ML1-'+sg.WRITE_ONLY_KEY,font='courier',size=(82,14),)])
 
-layout = [[sg.Column(Col_1), sg.VerticalSeparator(pad=None), sg.Column(Col_2)],   
-            
-            [sg.Text('')],
-            [sg.Button('REMOVE PADDED DATA FOR FOLDER DATA', key='Ok'), sg.Text(' '*50), sg.Button('?', key='HELP')]]
+layout = [[sg.Column(Col_1), sg.VerticalSeparator(pad=None), sg.Column(Col_2)],       
+        [sg.Text('')],
+        [sg.Button('REMOVE PADDED DATA FROM SELECTED FILES', key='Ok'), sg.Text(' '*50), sg.Button('?', key='HELP')]]
 
 # Create the Window
 window = sg.Window('North Loop Consulting', layout, no_titlebar=False, alpha_channel=1, grab_anywhere=False)
@@ -92,12 +114,16 @@ while True:
     if event == sg.WIN_CLOSED or event == 'Exit': # if user closes window or clicks cancel
         break
     if event == 'HELP':
-        sg.Popup("FOR BEST RESULTSulting\n")
+        sg.Popup("FINISH HELP INSTRUCTIONS\n")
         window.refresh()
     elif event == 'Ok':
-        Fix_MFn_Facebook_Return()
+        Cut_What_Where()
     if event == "PREVIEW":
-        hex_viewer()
+        prefile = values["PREVIEWFILE"]
+        for line in hex_viewer(prefile):
+            
+            window['-ML1-'+sg.WRITE_ONLY_KEY].print(line)
+        
         window.refresh()
     window.refresh()
 window.close()

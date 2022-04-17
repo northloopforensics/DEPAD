@@ -1,5 +1,4 @@
 #python3 script to walk directory and strip first or last bytes from each file under that directory
-#Run this on a copied folder.  It will place a copy of the file in same location with the selected bytes stripped
 #It also adds 'AMENDED' to the front of the file name so you know what is new
 #This does not look at file headers. It is not smart. 
 #

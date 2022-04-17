@@ -2,18 +2,27 @@
 #Run this on a copied folder.  It will place a copy of the file in same location with the selected bytes stripped
 #It also adds 'AMENDED' to the front of the file name so you know what is new
 #This does not look at file headers. It is not smart. 
-#It will remove bytes, and if the wrong bytes, it will break the newly copied files (but leave the original).
+#
+#   Tool workflow
+#   ID a target folder containing files that need bytes removed
+#   |
+#   Choose an output folder to store changed files
+#   |
+#   Select # of bytes to remove from start OR end of files
+#   |
+#   <OPTIONAL>
+#   |
+#   Preview window to see raw binary of a sample file
 
-#4-17-2022
 
 #TO DO 
 #   X   Functioning GUI 
-#       Preview window to show user the expected outcome of their data on hex view of a sample file. Use color or strikethru?
+#   /   Preview window to show user the expected outcome of their data on hex view of a sample file. Use color or strikethru?
 #   X   Progress bar
 #       Activity report - txt format include time/date, user settings, files processed. This will be text?
+#       Should there be logic to check for known file signatures? Probably not unless this thing becomes a carver.
 
 import os
-from webbrowser import get
 import PySimpleGUI as sg
 import itertools
 
@@ -31,15 +40,15 @@ def auto_preview():     #this function walks the source directory and finds the 
     n = 1
     all_files = os.listdir(direct)
     sort_files_by_size = sorted(all_files, key=lambda fileName: os.path.getsize(os.path.join(direct, fileName)))  #creates a list of files in directory by size
-    get_smallest = sort_files_by_size[:n]  #Selects the smallest file
-    get_smallest = get_smallest[0]          #takes the list result and chooses the only entry to get a string result
-    get_smallest = os.path.join(direct, get_smallest)   #creates an absolute path description of smallest file
-    if os.path.getsize(get_smallest) >= 512:            #only allows files larger than 512 bytes to prevent filesystem metadata artifacts from being brought in
+    get_smallest = sort_files_by_size[:n]               # Selects the smallest file
+    get_smallest = get_smallest[0]                      # Takes the list result and chooses the only entry to get a string result
+    get_smallest = os.path.join(direct, get_smallest)   # creates an absolute path description of smallest file
+    if os.path.getsize(get_smallest) >= 512:            # only allows files larger than 512 bytes to prevent filesystem metadata artifacts from being brought in
         global Auto_preview_file
         Auto_preview_file = get_smallest
         return(Auto_preview_file)
     else:
-        print("Auto-preview not available. Select a file for preview.")
+        print("Auto-preview not available. Select a file for preview.")  # Error msg
     
 
 def hex_group_formatter(iterable):
@@ -48,7 +57,7 @@ def hex_group_formatter(iterable):
         ' '.join(format(x, '0>2x') for x in chunk)
         for chunk in itertools.zip_longest(*chunks, fillvalue=0))
 
-def ascii_group_formatter(iterable):
+def ascii_group_formatter(iterable):                        # formats the ascii interpreter
     return ''.join(
         chr(x) if BEGIN_TABLES <= x <= END_TABLES else '.'
         for x in iterable)
@@ -59,7 +68,7 @@ def hex_viewer(filename, chunk_size=16):                #This reads 16 bytes at 
     yield ''
     template = '{:0>8x}    {:<53}{}'
 
-    with open(filename, 'rb') as stream:
+    with open(filename, 'rb') as stream:                # Opens file to be read in binary
         for chunk_count in itertools.count(1):
             chunk = stream.read(chunk_size)
             if not chunk:
@@ -69,51 +78,63 @@ def hex_viewer(filename, chunk_size=16):                #This reads 16 bytes at 
                 hex_group_formatter(chunk),
                 ascii_group_formatter(chunk))
 
-def Cut_What_Where():                                  #Walks the directory tree to find files
-    BYTES_TO_REMOVE_FROM_START = values["STARTBYTES"]                       #Gui input for bytes to remove from start
-    if BYTES_TO_REMOVE_FROM_START != "":
+def Cut_What_Where():                                                       #    Function to cut out binary values from file
+    BYTES_TO_REMOVE_FROM_START = values["STARTBYTES"]                       #   Gui input for bytes to remove from start
+    if BYTES_TO_REMOVE_FROM_START != "":                                    #   Checks that something is entered for bytes
         try:
-            BYTES_TO_REMOVE_FROM_START = int(BYTES_TO_REMOVE_FROM_START)        #Getting the Byte input for starting bytes and making sure it is an integer
+            BYTES_TO_REMOVE_FROM_START = int(BYTES_TO_REMOVE_FROM_START)        #   Getting the Byte input for starting bytes and converting from str to integer
         except(ValueError):
             print("Error - Byte count must be a decimal numeric value")
     
-    BYTES_TO_REMOVE_FROM_END = values["ENDBYTES"]                           #Getting the GUI Byte input for ending bytes and making sure it is an integer
-    if BYTES_TO_REMOVE_FROM_END != "":
+    BYTES_TO_REMOVE_FROM_END = values["ENDBYTES"]                           #   Getting the GUI Byte input for ending bytes and converting from str to integer
+    if BYTES_TO_REMOVE_FROM_END != "":                                      #   Checks that something is entered for bytes
         try:
             BYTES_TO_REMOVE_FROM_END = int(BYTES_TO_REMOVE_FROM_END)
         except(ValueError):
             print("ValueError - Byte count must be a decimal numeric value")
             
-    
     input_directory = values['SOURCE']  
     output_directory = values['OUT']                                        
+    byte_NUM_start = values["STARTOFFILE"]
+    byte_NUM_end = values['ENDOFFILE']
+    file_count = sum(len(files) for _, _, files in os.walk(input_directory))  #gets a recursive count of all files in input directory.  The "_" in the sum function are just skipped variables for root and dir
+    go_up = 0                        #   This value is a baseline, see below that it increments by +1 for each loop that happens below. Need this for progress bar. 
+ 
 
-    file_count = sum(len(files) for _, _, files in os.walk(input_directory))        #gets a recursive count of files in input directory.  The "_" in the sum function are just skipped variables for root and dir
-
-    go_up = 0
+    if isinstance(BYTES_TO_REMOVE_FROM_START, int) and byte_NUM_start == True:  # check - Did the user input an integer
+        pass
+    elif isinstance(BYTES_TO_REMOVE_FROM_END, int) and byte_NUM_end  == True:   # check - Did the user input an integer
+        pass
+    else:
+        return sg.Popup("TypeError - Byte count must be a decimal numeric value")  #popup window showing error that interupts the process
         
-    for root, dirs, files in os.walk(input_directory):                      #walks directory, subdirectories, and files
-        for file in files:                                                  #iterates to find files
-            go_up = go_up + 1
-            sg.OneLineProgressMeter('progress', go_up, file_count, orientation="H")
-            filepath = os.path.join(root,file)                              #creates an absolute path for each file
-            out_name = os.path.join(output_directory, "AMENDED_" + file)    #creates a new name for altered files
-            try:
+    try:    
+        for root, dirs, files in os.walk(input_directory):                      #walks directory, subdirectories, and files
+            for file in files:                                                  #iterates to address each found file
+                go_up = go_up + 1
+                sg.OneLineProgressMeter('progress', go_up, file_count, orientation="H")     #   progress bar
+                filepath = os.path.join(root,file)                              #creates an absolute path for each found file
+                out_name = os.path.join(output_directory, "AMENDED_" + file)    #creates a new name for altered files
+                
                 with open(filepath, 'rb') as in_file:                           #reads binary data of original file
                     with open(out_name, 'wb') as out_file:                      #makes a new output file
                         try:
-                            if values["STARTOFFILE"] == True:
+                            if byte_NUM_start == True:
                                 out_file.write(in_file.read()[BYTES_TO_REMOVE_FROM_START:])     #writes binary data less first N bytes from original file to new file
-                            elif values["ENDOFFILE"] == True:
+                            elif byte_NUM_end == True:
                                 out_file.write(in_file.read()[:-BYTES_TO_REMOVE_FROM_END])       #writes binary data less last N bytes from original file to new file
                         except(TypeError):
                             sg.Popup("TypeError - Byte count must be a decimal numeric value")  #popup window showing error
-            except(FileNotFoundError):
-                sg.Popup("Check that you selected a valid input and output folder")   #popup for error.    why is it taking 3 attempts to close the window?
-                window.refresh()
-    print(file_count)      
-                
-sg.theme('lightgray6')
+    except(FileNotFoundError):
+        sg.Popup("Check that you selected a valid input and output folder")   #popup for error.    why is it taking 3 attempts to close the window?
+        print('test')
+    except(TypeError):
+        sg.Popup("TypeError - Byte count must be a decimal numeric value")  #popup window showing error
+        window.refresh()
+    # print(file_count)   # for testing   
+
+
+sg.theme('lightgray6')  #GUI color scheme
 
 preview_tab = [[sg.Button('Preview Byte Selection', key="PREVIEW"), sg.Text(" "*60)],               # Preview Tab Window
         [sg.Radio('Automactically Select Preview File from Input Directory', font=('Arial', 12), group_id=3, default=True, key="AUTO")],
@@ -122,7 +143,7 @@ preview_tab = [[sg.Button('Preview Byte Selection', key="PREVIEW"), sg.Text(" "*
         [sg.Text('Select a sample file to preview the results before execution:', font=('Arial', 12))],
         [sg.Input(key='PREVIEWFILE',), sg.FileBrowse(key='PREVIEWFILE')],
         [sg.Text('')],
-        [sg.MLine(key='-ML1-'+sg.WRITE_ONLY_KEY,font='courier',size=(82,14))]]
+        [sg.MLine(key='-ML1-'+sg.WRITE_ONLY_KEY,font='courier',size=(82,14))]]      # Console window in GUI
 
 Gouger_tab = [[sg.Text('')],                                                                        #Cutting Tab Window
         [sg.Text('     '), sg.Text('Select Input and Output Directory:', font=('Arial', 12))],

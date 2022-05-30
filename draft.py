@@ -118,13 +118,14 @@ def Cut_What_Where():                                                       #   
         return sg.Popup("TypeError - Byte count must be a decimal numeric value")  #popup window showing error that interupts the process
     #   This starts the reporting process
     now = datetime.datetime.now()
+    now = now.strftime('%Y-%m-%d %H-%M-%S')
     now = str(now)
-    txt_report = (values['OUT'] + '/LOP_Activity_Report-' + now + '.txt')
+    txt_report = (values['OUT'] + '/DEPAD_Activity_Report-' + now + '.txt')
     with open(txt_report, 'a') as report:
-        report.write("SNIP - Binary Trimming Tool\n\n")
+        report.write("DEPAD - Data Management Tool\n\n")
         if values['STARTOFFILE'] == True:
             report.write("User selected to remove " + values['STARTBYTES'] + ' bytes from the start of the listed files.\n')
-        else:
+        if values['ENDOFFILE'] == True:
             report.write("User selected to remove " + values['ENDBYTES'] + ' bytes from the end of the listed files.\n\n')
 
         try:    
@@ -134,7 +135,7 @@ def Cut_What_Where():                                                       #   
                     sg.OneLineProgressMeter('progress', go_up, file_count, orientation="H")     #   progress bar
                     filepath = os.path.join(root,file)                              #creates an absolute path for each found file
                     out_name = os.path.join(output_directory, "AMENDED_" + file)    #creates a new name for altered files
-                    
+                    print(file)
                     with open(filepath, 'rb') as get_hash:
                         in_data = get_hash.read()
                         in_hash = hashlib.md5(in_data).hexdigest()
@@ -167,7 +168,7 @@ def Cut_What_Where():                                                       #   
             sg.Popup("TypeError - Byte count must be a decimal numeric value")  #popup window showing error
             window.refresh()
         # print(file_count)   # for testing   
-
+        sg.Popup("DEPAD process complete.")  #popup window showing completion
     
 #***************************** GUI-VILLE *********************************************
 
@@ -195,7 +196,7 @@ Gouger_tab = [[sg.Text('')],                                                    
         [sg.Text('')],
         [sg.Text('     '),sg.Button('REMOVE PADDED DATA FROM SELECTED FILES', key='Ok')]]
 
-layout = [[sg.Text('DEPAD', font=('Impact', 40, 'bold italic'))], 
+layout = [[sg.Text('DEPAD   ', font=('Impact', 40, 'bold italic'))], 
         [sg.Text('A Tool to Remove Padded Data from the Start or End of Bulk Files.', font=('Arial', 12,'bold'))],                                # Main Window
         [sg.TabGroup([[sg.Tab('Cutting', Gouger_tab, font=('Arial', 12)), sg.Tab("Previewing", preview_tab)]])]]
         
@@ -240,4 +241,3 @@ while True:
             window.refresh()
     window.refresh()
 window.close()
-            

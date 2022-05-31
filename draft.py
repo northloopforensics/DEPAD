@@ -16,7 +16,7 @@
 
 #   TO DO 
 #   X   Functioning GUI 
-#   /   Preview window to show user the expected outcome of their data on hex view of a sample file. Use color or strikethru?
+#   X   Preview window to show user the expected outcome of their data on hex view of a sample file. Use color or strikethru?
 #   X   Progress bar
 #   X   Activity report - txt format include time/date, user settings, files processed. This will be text?
 #       Should there be logic to check for known file signatures? Probably not unless this thing becomes a carver.
@@ -28,6 +28,7 @@ import PySimpleGUI as sg
 import itertools
 import datetime
 import hashlib
+import tempfile
 
 ASCII_character_start = 33       #ASCII characters to interpret 33 to 126
 ASCII_character_end = 126        #in hex view
@@ -71,30 +72,39 @@ def ascii_group_formatter(iterable):                        # formats the ascii 
         for x in iterable)
 
 def hex_viewer(filename, chunk_size=16):                #This reads 16 bytes at a time and creates a formatted line of the Address - Hex Values - ASCII interpretation on each line
+
     header = hex_group_formatter(range(chunk_size))     #This approach may not be ideal. How the hell am I going to update hex value colors this way?!?  Will have more coffee and rethink.
     yield 'ADDRESS     {:<53}      ASCII'.format(header)
     yield ''
     template = '{:0>8x}    {:<53}{}'
 
-    with open(filename, 'rb') as stream:                # Opens file to be read in binary
-        for chunk_count in itertools.count(1):
-            chunk = stream.read(chunk_size)
-            if not chunk:
-                return
-            yield template.format(
-                chunk_count * chunk_size,
-                hex_group_formatter(chunk),
-                ascii_group_formatter(chunk))
+    with open(filename, 'rb') as reduce:
+        with tempfile.NamedTemporaryFile(mode="rb+") as stream:
+            n = values["BYTE_COUNT"]
+            n = int(n)
+            smaller = reduce.read()[n:]
+            stream.write(smaller)
+            stream.seek(0)
+            for chunk_count in itertools.count(1):
+                chunk = stream.read(chunk_size)
+                if not chunk:
+                    return
+                yield template.format(
+                    chunk_count * chunk_size,
+                    hex_group_formatter(chunk),
+                    ascii_group_formatter(chunk))
+
+
 
 def Cut_What_Where():                                                       #    Function to remove selected binary values from file
-    BYTES_TO_REMOVE_FROM_START = values["STARTBYTES"]                       #   Gui input for bytes to remove from start
+    BYTES_TO_REMOVE_FROM_START = values["BYTE_COUNT"]                       #   Gui input for bytes to remove from start
     if BYTES_TO_REMOVE_FROM_START != "":                                    #   Checks that something is entered for bytes
         try:
             BYTES_TO_REMOVE_FROM_START = int(BYTES_TO_REMOVE_FROM_START)        #   Getting the Byte input for starting bytes and converting from str to integer
         except(ValueError):
             print("Error - Byte count must be a decimal numeric value")
     
-    BYTES_TO_REMOVE_FROM_END = values["ENDBYTES"]                           #   Getting the GUI Byte input for ending bytes and converting from str to integer
+    BYTES_TO_REMOVE_FROM_END = values["BYTE_COUNT"]                           #   Getting the GUI Byte input for ending bytes and converting from str to integer
     if BYTES_TO_REMOVE_FROM_END != "":                                      #   Checks that something is entered for bytes
         try:
             BYTES_TO_REMOVE_FROM_END = int(BYTES_TO_REMOVE_FROM_END)
@@ -124,9 +134,9 @@ def Cut_What_Where():                                                       #   
     with open(txt_report, 'a') as report:
         report.write("DEPAD - Data Management Tool\n\n")
         if values['STARTOFFILE'] == True:
-            report.write("User selected to remove " + values['STARTBYTES'] + ' bytes from the start of the listed files.\n')
+            report.write("User selected to remove " + values['BYTE_COUNT'] + ' bytes from the start of the listed files.\n')
         if values['ENDOFFILE'] == True:
-            report.write("User selected to remove " + values['ENDBYTES'] + ' bytes from the end of the listed files.\n\n')
+            report.write("User selected to remove " + values['BYTE_COUNT'] + ' bytes from the end of the listed files.\n\n')
 
         try:    
             for root, dirs, files in os.walk(input_directory):                      #walks directory, subdirectories, and files
@@ -135,7 +145,7 @@ def Cut_What_Where():                                                       #   
                     sg.OneLineProgressMeter('progress', go_up, file_count, orientation="H")     #   progress bar
                     filepath = os.path.join(root,file)                              #creates an absolute path for each found file
                     out_name = os.path.join(output_directory, "AMENDED_" + file)    #creates a new name for altered files
-                    print(file)
+                    #print(file)
                     with open(filepath, 'rb') as get_hash:
                         in_data = get_hash.read()
                         in_hash = hashlib.md5(in_data).hexdigest()
@@ -189,16 +199,15 @@ Gouger_tab = [[sg.Text('')],                                                    
         [sg.Text('')],
         [sg.Text('     '),sg.Input("OUTPUT FOLDER - Amended Data & Report", font=('Arial', 12), key='OUT',), sg.FolderBrowse(key='OUT')],
         [sg.Text('     '),sg.Text('')],
-        [sg.Text('     '),sg.Radio('# of Bytes to Remove from Start of Files (Dec)', key="STARTOFFILE", font=('Arial', 12), default=True, group_id=1.), sg.Input('', size=(10,2), key="STARTBYTES")],
-        #[sg.Text('_'*82)],
-        [sg.Text('     '),sg.Radio('# of Bytes to Remove from End of Files (Dec) ', enable_events=True ,key="ENDOFFILE", font=('Arial', 12), group_id=1), sg.Input('', size=(10,2), key="ENDBYTES")],       
+        [sg.Text('     '), sg.Input('Bytes to Remove (Dec)', font=('Arial', 12),size=(21,2), key="BYTE_COUNT"), sg.Radio('From Start of Files', key="STARTOFFILE", font=('Arial', 12), default=True, group_id=1.), sg.Radio('From End of Files', enable_events=True ,key="ENDOFFILE", font=('Arial', 12), group_id=1)],
+        #[sg.Text('_'*82)],      
         [sg.Text('')],
         [sg.Text('')],
         [sg.Text('     '),sg.Button('REMOVE PADDED DATA FROM SELECTED FILES', key='Ok')]]
 
 layout = [[sg.Text('DEPAD   ', font=('Impact', 40, 'bold italic'))], 
         [sg.Text('A Tool to Remove Padded Data from the Start or End of Bulk Files.', font=('Arial', 12,'bold'))],                                # Main Window
-        [sg.TabGroup([[sg.Tab('Cutting', Gouger_tab, font=('Arial', 12)), sg.Tab("Previewing", preview_tab)]])]]
+        [sg.TabGroup([[sg.Tab('Removal', Gouger_tab, font=('Arial', 12)), sg.Tab("Previewing", preview_tab)]])]]
         
 
 #******************** BRINGS GUI & FUNCTIONS TOGETHER ********************************
@@ -215,6 +224,7 @@ while True:
     if event == 'Ok':
         Cut_What_Where()
     if event == 'PREVIEW':
+        start = values["BYTE_COUNT"]
         try:
             if values["AUTO"] == True:
                 try:
@@ -222,6 +232,7 @@ while True:
                 except(FileNotFoundError):
                     window['-ML1-'+sg.WRITE_ONLY_KEY].print("*****  You must choose a source directory  *****\n")
                 prefile = Auto_preview_file
+                window['-ML1-'+sg.WRITE_ONLY_KEY].print("*****  Preview of sample file with " + values["BYTE_COUNT"] + " bytes removed.  *****\n")
                 for line in hex_viewer(prefile):
                     window['-ML1-'+sg.WRITE_ONLY_KEY].print(line)
             
@@ -232,6 +243,7 @@ while True:
                         window['-ML1-'+sg.WRITE_ONLY_KEY].print("*****  You must select a preview file  *****\n")   # In-console error msg
                         
                     if len(prefile) > 5:            #checks length of file path to allow entries with actual path
+                        window['-ML1-'+sg.WRITE_ONLY_KEY].print("*****  Preview of sample file with " + values["BYTE_COUNT"] + " bytes removed.  *****\n")
                         for line in hex_viewer(prefile):
                             window['-ML1-'+sg.WRITE_ONLY_KEY].print(line)
                             window.refresh()

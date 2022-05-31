@@ -6,6 +6,7 @@ This project started after a law enforcemnt agency received a legal production c
 
 The immediate solution was to create a small script to solve the problem, but DEPAD is a continuation of this solution which now includes a GUI interface and a file preview option within the tool to help determine what bytes need to be removed. 
 
+
 How it works:
 
 1.  Working with a copy, select the directory containing padded files. 
@@ -14,3 +15,5 @@ How it works:
 4.  DEPAD will then write file copies from the input/source directory to the output directory less the bytes defined by the user.
 5.  These copies will have their file name altered to include "AMENDED_" so the user can easily tell the difference from original files.
 6.  DEPAD also creates a text report showing the files copied, their original MD5 hash value, and the MD5 of the amended file. 
+
+![DEPADPREVIEW](https://user-images.githubusercontent.com/73806121/171286358-3d1aac1c-5d44-4bde-8c7b-64cf165000b0.png)

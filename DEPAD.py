@@ -55,6 +55,7 @@ def auto_preview():                                 #this function walks the sou
         
         return(Auto_preview_file)
     except:
+        window['-ML1-'+sg.WRITE_ONLY_KEY].print("Unable to load a file between 100 bytes and 100mb from the target directory. Manually select a file to preview.")
         print("Unable to load a file between 100 bytes and 100mb from the target directory. Manually select a file to preview.")        
     # else:
     #     window['-ML1-'+sg.WRITE_ONLY_KEY].print("Auto-preview not available. Select a file for preview.")  # Error msg
@@ -80,6 +81,7 @@ def hex_viewer(filename, chunk_size=16):                #This reads 16 bytes at 
 
     with open(filename, 'rb') as reduce:
         with tempfile.NamedTemporaryFile(mode="rb+") as stream:
+            
             n = values["BYTE_COUNT"]
             n = int(n)
             smaller = reduce.read()[n:]
@@ -194,16 +196,17 @@ preview_tab = [[sg.Button('Preview Byte Selection', key="PREVIEW"), sg.Text(" "*
         [sg.MLine(key='-ML1-'+sg.WRITE_ONLY_KEY,font='courier',size=(82,14))]]      # Console window in GUI
 
 Gouger_tab = [[sg.Text('')],                                                                        #Cutting Tab Window
-        [sg.Text('     '), sg.Text('Select Input and Output Directory:', font=('Arial', 12))],
-        [sg.Text('     '),sg.Input("INPUT FOLDER - Source Data", font=('Arial', 12), key='SOURCE',), sg.FolderBrowse(key='SOURCE'), sg.Text(' '*10)], 
+        [sg.Text('        '), sg.Text('Select Input and Output Directory:', font=('Arial', 12))],
+        [sg.Text('        '),sg.Input("INPUT FOLDER - Source Data", font=('Arial', 12), key='SOURCE',), sg.FolderBrowse(key='SOURCE'), sg.Text(' '*10)], 
         [sg.Text('')],
-        [sg.Text('     '),sg.Input("OUTPUT FOLDER - Amended Data & Report", font=('Arial', 12), key='OUT',), sg.FolderBrowse(key='OUT')],
-        [sg.Text('     '),sg.Text('')],
-        [sg.Text('     '), sg.Input('Bytes to Remove (Dec)', font=('Arial', 12),size=(21,2), key="BYTE_COUNT"), sg.Radio('From Start of Files', key="STARTOFFILE", font=('Arial', 12), default=True, group_id=1.), sg.Radio('From End of Files', enable_events=True ,key="ENDOFFILE", font=('Arial', 12), group_id=1)],
+        [sg.Text('        '),sg.Input("OUTPUT FOLDER - Amended Data & Report", font=('Arial', 12), key='OUT',), sg.FolderBrowse(key='OUT')],
+        [sg.Text('        '),sg.Text('')],
+        [sg.Text('          Bytes to Remove (Dec)', font=('Arial', 12)), sg.Input(size=(21,2), default_text=0 ,key="BYTE_COUNT")],
+        [sg.Text('        '), sg.Radio('From Start of Files', key="STARTOFFILE", font=('Arial', 12), default=True, group_id=1.), sg.Radio('From End of Files', enable_events=True ,key="ENDOFFILE", font=('Arial', 12), group_id=1)],
         #[sg.Text('_'*82)],      
         [sg.Text('')],
         [sg.Text('')],
-        [sg.Text('     '),sg.Button('REMOVE PADDED DATA FROM SELECTED FILES', key='Ok')]]
+        [sg.Text('        '),sg.Button('REMOVE PADDED DATA FROM SELECTED FILES', key='Ok')]]
 
 layout = [[sg.Text('DEPAD   ', font=('Impact', 40, 'bold italic'))], 
         [sg.Text('A Tool to Remove Padded Data from the Start or End of Bulk Files.', font=('Arial', 12,'bold'))],                                # Main Window
@@ -232,10 +235,11 @@ while True:
                 except(FileNotFoundError):
                     window['-ML1-'+sg.WRITE_ONLY_KEY].print("*****  You must choose a source directory  *****\n")
                 prefile = Auto_preview_file
+                window['-ML1-'+sg.WRITE_ONLY_KEY].print("Preview file selected: " + prefile + " \n")
                 window['-ML1-'+sg.WRITE_ONLY_KEY].print("*****  Preview of sample file with " + values["BYTE_COUNT"] + " bytes removed.  *****\n")
                 for line in hex_viewer(prefile):
                     window['-ML1-'+sg.WRITE_ONLY_KEY].print(line)
-            
+                window['-ML1-'+sg.WRITE_ONLY_KEY].print(" ")           
             elif values["ChooseFile"] == True:  #Checkbox for manual preview file selection
                 try:
                     prefile = values["PREVIEWFILE"]
@@ -243,10 +247,12 @@ while True:
                         window['-ML1-'+sg.WRITE_ONLY_KEY].print("*****  You must select a preview file  *****\n")   # In-console error msg
                         
                     if len(prefile) > 5:            #checks length of file path to allow entries with actual path
+                        window['-ML1-'+sg.WRITE_ONLY_KEY].print("Preview file selected: " + prefile + " \n")
                         window['-ML1-'+sg.WRITE_ONLY_KEY].print("*****  Preview of sample file with " + values["BYTE_COUNT"] + " bytes removed.  *****\n")
                         for line in hex_viewer(prefile):
                             window['-ML1-'+sg.WRITE_ONLY_KEY].print(line)
                             window.refresh()
+                        window['-ML1-'+sg.WRITE_ONLY_KEY].print(" ")    
                 except:
                     window['-ML1-'+sg.WRITE_ONLY_KEY].print("*****  You must select a preview file  *****\n")  # In-console error msg
         except:

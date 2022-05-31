@@ -10,7 +10,7 @@ How it works:
 
 1.  Working with a copy, select the directory containing padded files. 
 2.  Select an output.
-3.  Input the number of bytes and their location.
+3.  Define the number of bytes to be removed from the start or end of the file data.
 4.  DEPAD will then write file copies from the input/source directory to the output directory less the bytes defined by the user.
 5.  These copies will have their file name altered to include "AMENDED_" so the user can easily tell the difference from original files.
 6.  DEPAD also creates a text report showing the files copied, their original MD5 hash value, and the MD5 of the amended file. 

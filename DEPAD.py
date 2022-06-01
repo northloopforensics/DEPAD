@@ -134,12 +134,13 @@ def Cut_What_Where():                                                       #   
     now = str(now)
     txt_report = (values['OUT'] + '/DEPAD_Activity_Report-' + now + '.txt')
     with open(txt_report, 'a') as report:
-        report.write("DEPAD - Data Management Tool\n\n")
+        report.write("DEPAD - Data Management Tool\n")
+        report.write("Activity Report: " + now + '\n')
         if values['STARTOFFILE'] == True:
-            report.write("User selected to remove " + values['BYTE_COUNT'] + ' bytes from the start of the listed files.\n')
+            report.write("User selected to remove " + values['BYTE_COUNT'] + ' bytes from the start of the listed files.\n\n')
         if values['ENDOFFILE'] == True:
             report.write("User selected to remove " + values['BYTE_COUNT'] + ' bytes from the end of the listed files.\n\n')
-
+        report.write("\n")
         try:    
             for root, dirs, files in os.walk(input_directory):                      #walks directory, subdirectories, and files
                 for file in files:                                                  #iterates to address each found file

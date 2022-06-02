@@ -84,11 +84,14 @@ def hex_viewer(filename, chunk_size=16):                #This reads 16 bytes at 
             
             n = values["BYTE_COUNT"]
             n = int(n)
-            smaller = reduce.read()[n:]
+            if values["STARTOFFILE"] == True:
+                smaller = reduce.read()[n:]
+            if values["ENDOFFILE"] == True:
+                smaller = reduce.read()[:-n]
             stream.write(smaller)
             stream.seek(0)
-            for chunk_count in itertools.count(0):
-                chunk = stream.read(chunk_size)
+            for chunk_count in itertools.count(0):              #starts the hex address count at x00
+                chunk = stream.read(chunk_size)                 # reads in 16 byte iterations
                 if not chunk:
                     return
                 yield template.format(

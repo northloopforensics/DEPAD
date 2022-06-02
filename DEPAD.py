@@ -87,7 +87,7 @@ def hex_viewer(filename, chunk_size=16):                #This reads 16 bytes at 
             smaller = reduce.read()[n:]
             stream.write(smaller)
             stream.seek(0)
-            for chunk_count in itertools.count(1):
+            for chunk_count in itertools.count(0):
                 chunk = stream.read(chunk_size)
                 if not chunk:
                     return

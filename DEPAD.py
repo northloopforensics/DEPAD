@@ -33,7 +33,7 @@ import tempfile
 ASCII_character_start = 33       #ASCII characters to interpret 33 to 126
 ASCII_character_end = 126        #in hex view
 
-#********************* LAND OF FUNCTIONS ***********************
+#********************* LAND OF FUNCTIONS ***********************some kind of change to the code
 
 def auto_preview():                                 #this function walks the source directory and finds the 
                                                     #smallest file that is between 100 bytes and 100mb for binary preview

@@ -84,10 +84,11 @@ def hex_viewer(filename, chunk_size=16):                #This reads 16 bytes at 
             
             n = values["BYTE_COUNT"]
             n = int(n)
+            reduced_file_size = n + 512
             if values["STARTOFFILE"] == True:
-                smaller = reduce.read()[n:]
+                smaller = reduce.read()[n:reduced_file_size]
             if values["ENDOFFILE"] == True:
-                smaller = reduce.read()[:-n]
+                smaller = reduce.read()[-reduced_file_size:-n]
             stream.write(smaller)
             stream.seek(0)
             for chunk_count in itertools.count(0):              #starts the hex address count at x00
@@ -196,7 +197,7 @@ preview_tab = [[sg.Button('Preview Byte Selection', key="PREVIEW"), sg.Text(" "*
         [sg.Text('     '), sg.Radio("Manually Select Preview File", font=('Arial', 12), group_id=3, key="ChooseFile")],  
         [sg.Text('     '), sg.Text('Select a sample file to preview the results before execution:', font=('Arial', 12))],
         [sg.Text('     '), sg.Input(key='PREVIEWFILE',), sg.FileBrowse(key='PREVIEWFILE')],
-        [sg.Text('')],
+        [sg.Text('          * Preview shows 512 bytes of output', font=('Arial', 8))],
         [sg.MLine(key='-ML1-'+sg.WRITE_ONLY_KEY,font='courier',size=(82,14))]]      # Console window in GUI
 
 Gouger_tab = [[sg.Text('')],                                                                        #Cutting Tab Window
